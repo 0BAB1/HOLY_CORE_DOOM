@@ -76,7 +76,7 @@
  * Helper Functions
  * ============================================================================= */
 static void delay_ms(uint32_t ms) {
-    for (volatile uint32_t i = 0; i < ms; i++);
+    for (volatile uint32_t i = 0; i < (ms); i++);
 }
 
 void debug_dump_regs(void) {
@@ -153,7 +153,7 @@ void lcd_init(void) {
     
     /* Memory access control */
     lcd_cmd(ILI9341_MADCTL);
-    lcd_data(0x48);
+    lcd_data(0x08);
     
     /* Display ON */
     lcd_cmd(ILI9341_DISPON);
@@ -183,9 +183,7 @@ void lcd_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t colo
     
     for (uint16_t row = 0; row < h; row++) {
         for (uint16_t col = 0; col < w; col++) {
-            while (SPI_STATUS & SPI_SR_TX_FULL);
             SPI_TX = hi;
-            while (SPI_STATUS & SPI_SR_TX_FULL);
             SPI_TX = lo;
         }
     }
@@ -204,6 +202,9 @@ void I_InitGraphics(void) {
     lcd_fill_screen(COLOR_RED);
 }
 void I_ShutdownGraphics(void) { /* Don't need to do anything really ... */ }
+
+static uint16_t pal565[256];
+static int pal_ready = 0;
 
 void I_SetPalette(byte *palette) {
   byte r, g, b;
@@ -224,18 +225,11 @@ uint32_t frameGenEnd = 0;
 
 void I_FinishUpdate(void) {
     frameGenEnd = I_GetMTime();
-
-    #define OUT_WIDTH  160
-    #define OUT_HEIGHT 100
     
-    lcd_set_window(0, 0, OUT_HEIGHT - 1, OUT_WIDTH - 1);
+    lcd_set_window(0, 0, SCREENHEIGHT - 1, SCREENWIDTH - 1);
 
     GPIO2_DATA |= PIN_DC;
     SPI_SS = 0xFFFFFFFE;
-
-    /* Pre-compute palette to RGB565 once */
-    static uint16_t pal565[256];
-    static int pal_ready = 0;
     
     if (!pal_ready) {
         for (int i = 0; i < 256; i++) {
@@ -248,15 +242,14 @@ void I_FinishUpdate(void) {
         pal_ready = 1;
     }
 
-    /* Send pixels - skip every other row and column (4x fewer pixels) */
-    for (int x = 0; x < SCREENWIDTH; x += 2) {
-        for (int y = SCREENHEIGHT - 2; y >= 0; y -= 2) {
+    /* Send pixels */
+    for (int x = 0; x < SCREENWIDTH; x++) {
+        for (int y = 0; y < SCREENHEIGHT; y++) {
             uint8_t pixel = screens[0][y * SCREENWIDTH + x];
             uint16_t color = pal565[pixel];
             
             while (SPI_STATUS & SPI_SR_TX_FULL);
             SPI_TX = color >> 8;
-            while (SPI_STATUS & SPI_SR_TX_FULL);
             SPI_TX = color & 0xFF;
         }
     }
@@ -264,7 +257,7 @@ void I_FinishUpdate(void) {
     spi_wait();
     SPI_SS = 0xFFFFFFFF;
 
-    printf("Num cycles to render this frame: %d\n\r", frameGenEnd - frameGenStart);
+    printf("Num cycles to render this frame: %d\n\r", (uint32_t)(frameGenEnd - frameGenStart));
     frameGenStart = I_GetMTime();
 }
 
@@ -283,7 +276,7 @@ void I_ReadScreen(byte *scr) {
    *        but it seems buggy. Not sure if the problem is in the
    *        gateware
    */
-  memcpy(scr, screens[0], SCREENHEIGHT * SCREENWIDTH);
+  //memcpy(scr, screens[0], SCREENHEIGHT * SCREENWIDTH);
 }
 
 #if 0 /* WTF ? Not used ... */

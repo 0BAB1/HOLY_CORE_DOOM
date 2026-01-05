@@ -63,27 +63,26 @@ I_ZoneBase(int *size)
 int
 I_GetTime(void)
 {
-  uint32_t time = (*mtime / 1000) / 32 / 1000;
-  return time;
+    uint32_t time = (uint32_t)(*mtime) / 714286;
+    return time;
 }
 
 int
 I_GetMTime(void)
 {
-  uint32_t time = *mtime;
+  uint32_t time = (uint32_t)(*mtime);
   return time;
 }
 
-static void
-I_GetRemoteEvent(void)
+static void I_GetRemoteEvent(void)
 {
     event_t event;
-
     static byte ascii_map[128]; // maps ASCII codes to Doom keys
     static int init_map_done = 0;
-
+    static byte pressed_keys[128] = {0}; // Track which keys are currently pressed
+    
     if (!init_map_done) {
-    memset(ascii_map, 0, sizeof(ascii_map));
+        memset(ascii_map, 0, sizeof(ascii_map));
         ascii_map['z'] = KEY_UPARROW;
         ascii_map['s'] = KEY_DOWNARROW;
         ascii_map['q'] = KEY_LEFTARROW;
@@ -93,31 +92,44 @@ I_GetRemoteEvent(void)
         ascii_map['a'] = KEY_ESCAPE;  // menu back
         init_map_done = 1;
     }
-
+    
     static byte s_btn = 0;
-
     boolean mupd = false;
     int mdx = 0;
     int mdy = 0;
-
+    
+    // First, release all previously pressed keys
+    for (int i = 0; i < 128; i++) {
+        if (pressed_keys[i] && ascii_map[i]) {
+            event.type = ev_keyup;
+            event.data1 = ascii_map[i];
+            D_PostEvent(&event);
+            pressed_keys[i] = 0;
+        }
+    }
+    
+    // Then process any new key presses
     while (1) {
         int ch = console_getchar_nowait();
         if (ch == -1)
             break;
-
-        byte doomkey = ascii_map[ch];
-        if (doomkey) {
-            event.type = ev_keydown;
-            event.data1 = doomkey;
-            D_PostEvent(&event);
+        
+        if (ch >= 0 && ch < 128) {
+            byte doomkey = ascii_map[ch];
+            if (doomkey) {
+                event.type = ev_keydown;
+                event.data1 = doomkey;
+                D_PostEvent(&event);
+                pressed_keys[ch] = 1;
+            }
         }
     }
-
+    
     if (mupd) {
         event.type = ev_mouse;
         event.data1 = s_btn;
         event.data2 =   mdx << 2;
-        event.data3 = - mdy << 2;	/* Doom is sort of inverted ... */
+        event.data3 = - mdy << 2;   /* Doom is sort of inverted ... */
         D_PostEvent(&event);
     }
 }

@@ -3,6 +3,11 @@
     .section .text.start
     .global _start
 _start:
+    la t0, real_start
+    csrw mepc, t0
+    mret
+
+real_start:
     // Set stack pointer
     la sp, __stacktop
 
@@ -17,9 +22,10 @@ _start:
 
     // cache setup
     li t0, 0x0
-    li t1, 0x7FFFFFFF
+    li t1, 0x80000000
     csrrw x0, 0x7C1, t0
     csrrw x0, 0x7C2, t1
+    li t1, 0x80000000
     csrrw x0, 0x7C3, t0
     csrrw x0, 0x7C4, t1
     csrrw x0, mscratch, t1

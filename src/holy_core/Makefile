@@ -8,7 +8,8 @@ SIZE = $(CROSS)size
 ICEPROG = iceprog
 
 # holy core template : CFLAGS = -march=rv32i -mabi=ilp32 -mstrict-align -nostdlib -Wall -Wextra -I../hc_lib/include
-CFLAGS=-Wall -g -march=rv32im -mabi=ilp32 -mstrict-align -ffreestanding -flto -nostartfiles -fomit-frame-pointer -Wl,--gc-section --specs=nano.specs -I.. -I../../../../hc_lib/include
+CFLAGS=-Wall -O1 -march=rv32im -mabi=ilp32 -mstrict-align -ffreestanding -nostartfiles -fomit-frame-pointer -Wl,--gc-section --specs=nano.specs -I.. -I../../../../hc_lib/include
+# CFLAGS=-Wall -O1 -march=rv32im -mabi=ilp32 -mstrict-align -mno-strict-align -ffreestanding -flto -nostartfiles -fomit-frame-pointer -Wl,--gc-section --specs=nano.specs -I.. -I../../../../hc_lib/include
 
 CFLAGS += \
 	-DNORMALUNIX \
@@ -48,8 +49,7 @@ wad.o: doom1.wad
 	riscv32-unknown-elf-objcopy -I binary -O elf32-littleriscv doom1.wad wad.o
 
 doom-riscv.elf: riscv.lds $(addprefix ../,$(SOURCES_doom)) $(SOURCES_doom_arch)
-	$(CC) $(CFLAGS) -Wl,-Bstatic,-T,riscv.lds -o $@ $(addprefix ../,$(SOURCES_doom)) $(SOURCES_doom_arch) $(LIBS)
-	$(SIZE) $@
+	$(CC) $(CFLAGS) -march=rv32im -mabi=ilp32 -Wl,-Bstatic,-T,riscv.lds -o $@ $(addprefix ../,$(SOURCES_doom)) $(SOURCES_doom_arch) $(LIBS)
 
 clean:
 	rm -f *.bin *.hex *.elf *.o *.gen.h
